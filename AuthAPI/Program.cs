@@ -28,7 +28,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddDefaultTokenProviders();
 
 
-
 //builder.Services.AddIdentityApiEndpoints<IdentityUser>();
 
 // Add JWT authentication
