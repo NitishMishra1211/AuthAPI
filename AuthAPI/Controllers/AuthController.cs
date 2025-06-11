@@ -63,7 +63,7 @@ namespace AuthAPI.Controllers
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, user.UserName)
                 };
-                var signinKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("this is the secret phrase"));
+                var signinKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("this is a much longer secret phrase that is at least 256 bits long"));
                 int expiryInMinutes = 5;
                 var token = new JwtSecurityToken(
                     issuer: "http://localhost:5000",
