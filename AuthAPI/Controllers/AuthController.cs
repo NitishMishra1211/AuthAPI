@@ -1,4 +1,5 @@
 ﻿using AuthAPI.Models;
+using AuthAPI.Services.IServices;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,10 +16,12 @@ namespace AuthAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> userManager;
+        private readonly IJwtTokenServices jwtTokenService;
 
-        public AuthController(UserManager<ApplicationUser> userManager)
+        public AuthController(UserManager<ApplicationUser> userManager,IJwtTokenServices jwtTokenServices)
         {
             this.userManager = userManager;
+            this.jwtTokenService = jwtTokenServices;
         }
 
         [HttpGet("user-details")]
@@ -57,29 +60,12 @@ namespace AuthAPI.Controllers
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             var user = await userManager.FindByNameAsync(model.Email);
-            if (user != null && await userManager.CheckPasswordAsync(user, model.Password))
+            if (user == null && !await userManager.CheckPasswordAsync(user, model.Password))
             {
-                var claims = new[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName)
-                };
-                var signinKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("this is a much longer secret phrase that is at least 256 bits long"));
-                int expiryInMinutes = 5;
-                var token = new JwtSecurityToken(
-                    issuer: "http://localhost:5000",
-                    audience: "http://localhost:5000",
-                    claims: claims,
-                    expires: DateTime.UtcNow.AddMinutes(expiryInMinutes),
-                    signingCredentials: new SigningCredentials(signinKey, SecurityAlgorithms.HmacSha256)
-                );
-                return Ok(
-                    new
-                    {
-                        token = new JwtSecurityTokenHandler().WriteToken(token),
-                        expiration = token.ValidTo
-                    });
+                return Unauthorized();
             }
-            return Unauthorized();
-        }
+            var token = jwtTokenService.GenerateToken(user.Id, user.UserName);
+            return token != null ? Ok(new { Token = token }) : BadRequest("Token generation failed.");
+        }                                                                                                                                                
     }
 }

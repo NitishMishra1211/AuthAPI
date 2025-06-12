@@ -1,7 +1,11 @@
+using AuthAPI.Dto;
 using AuthAPI.Models;
+using AuthAPI.Services;
+using AuthAPI.Services.IServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using static AuthAPI.Models.ApplicationDbContext;
@@ -31,12 +35,14 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 //builder.Services.AddIdentityApiEndpoints<IdentityUser>();
 
 // Add JWT authentication
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrEmpty(jwtKey))
+var jwtSettings = builder.Configuration.GetSection("jwt").Get<JwtSettings>(); 
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("jwt"));
+builder.Services.AddScoped<IJwtTokenServices, jwtTokenService>();
+if (string.IsNullOrEmpty(jwtSettings.Key))
 {
     throw new InvalidOperationException("JWT Key is not configured.");
 }
-var key = Encoding.UTF8.GetBytes(jwtKey);
+var key = Encoding.UTF8.GetBytes(jwtSettings.Key);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -49,9 +55,9 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Issuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(key)
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
     };
 });
 
